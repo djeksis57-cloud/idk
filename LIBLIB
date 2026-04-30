@@ -48,7 +48,14 @@ local function CreateTween(instance, properties, duration, style, direction)
     style = style or Config.EasingStyle
     direction = direction or Config.EasingDirection
 
-    local tweenInfo = TweenInfo.new(duration, style, direction)
+    local tweenInfo = TweenInfo.new(
+        duration,
+        style,
+        direction,
+        0,
+        false,
+        0
+    )
     return TweenService:Create(instance, tweenInfo, properties)
 end
 
@@ -442,59 +449,135 @@ function Library:Input(options)
     local callback = options.Callback or function() end
     local color = options.Color or Config.PrimaryColor
 
-    local frame = CreateNotificationFrame(130)
+    local frame = CreateNotificationFrame(150)
 
     AddGradient(frame, color, Config.SecondaryColor, 60)
-    AddStroke(frame, color, 2)
+    AddStroke(frame, color, 3)
     AddGlow(frame, color)
 
-    -- Text
+    -- Animated border particles
+    local particleContainer = Instance.new("Frame")
+    particleContainer.BackgroundTransparency = 1
+    particleContainer.Size = UDim2.new(1, 0, 1, 0)
+    particleContainer.ZIndex = 5
+    particleContainer.Parent = frame
+
+    for i = 1, 8 do
+        local particle = Instance.new("Frame")
+        particle.BackgroundColor3 = color
+        particle.BorderSizePixel = 0
+        particle.Size = UDim2.new(0, 4, 0, 4)
+        particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        particle.Parent = particleContainer
+        AddCorner(particle, UDim.new(1, 0))
+
+        spawn(function()
+            while particle and particle.Parent do
+                CreateTween(particle, {
+                    Position = UDim2.new(math.random(), 0, math.random(), 0),
+                    BackgroundTransparency = math.random(30, 70) / 100
+                }, 2 + math.random(), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+                wait(2 + math.random())
+            end
+        end)
+    end
+
+    -- Text with icon
     local TextLabel = Instance.new("TextLabel")
     TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, -20, 0, 30)
+    TextLabel.Size = UDim2.new(1, -50, 0, 30)
     TextLabel.Position = UDim2.new(0, 10, 0, 10)
     TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = text
+    TextLabel.Text = "✏️ " .. text
     TextLabel.TextColor3 = Config.TextColor
     TextLabel.TextSize = 15
     TextLabel.TextWrapped = true
     TextLabel.Parent = frame
 
+    -- Input Box Container with shadow
+    local InputShadow = Instance.new("Frame")
+    InputShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    InputShadow.BackgroundTransparency = 0.7
+    InputShadow.BorderSizePixel = 0
+    InputShadow.Size = UDim2.new(1, -16, 0, 40)
+    InputShadow.Position = UDim2.new(0, 12, 0, 49)
+    InputShadow.ZIndex = 1
+    InputShadow.Parent = frame
+    AddCorner(InputShadow, UDim.new(0, 10))
+
     -- Input Box
     local InputBox = Instance.new("TextBox")
-    InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    InputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     InputBox.BorderSizePixel = 0
-    InputBox.Size = UDim2.new(1, -20, 0, 35)
+    InputBox.Size = UDim2.new(1, -20, 0, 40)
     InputBox.Position = UDim2.new(0, 10, 0, 45)
-    InputBox.Font = Enum.Font.Gotham
+    InputBox.Font = Enum.Font.GothamBold
     InputBox.PlaceholderText = placeholder
+    InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
     InputBox.Text = ""
     InputBox.TextColor3 = Config.TextColor
-    InputBox.TextSize = 14
+    InputBox.TextSize = 15
     InputBox.ClearTextOnFocus = false
+    InputBox.ZIndex = 2
     InputBox.Parent = frame
 
-    AddCorner(InputBox, UDim.new(0, 8))
-    AddStroke(InputBox, color, 1)
+    AddCorner(InputBox, UDim.new(0, 10))
+    AddStroke(InputBox, color, 2)
+    AddGradient(InputBox, Color3.fromRGB(30, 30, 40), Color3.fromRGB(50, 50, 60), 90)
 
     local InputPadding = Instance.new("UIPadding")
-    InputPadding.PaddingLeft = UDim.new(0, 10)
-    InputPadding.PaddingRight = UDim.new(0, 10)
+    InputPadding.PaddingLeft = UDim.new(0, 12)
+    InputPadding.PaddingRight = UDim.new(0, 12)
     InputPadding.Parent = InputBox
 
-    -- Submit Button
+    -- Input glow effect on focus
+    local inputGlow = AddGlow(InputBox, color)
+    inputGlow.ImageTransparency = 1
+
+    InputBox.Focused:Connect(function()
+        CreateTween(inputGlow, {ImageTransparency = 0.3}, 0.3):Play()
+        CreateTween(InputBox:FindFirstChildOfClass("UIStroke"), {Thickness = 3}, 0.2):Play()
+    end)
+
+    InputBox.FocusLost:Connect(function(enterPressed)
+        CreateTween(inputGlow, {ImageTransparency = 1}, 0.3):Play()
+        CreateTween(InputBox:FindFirstChildOfClass("UIStroke"), {Thickness = 2}, 0.2):Play()
+        if enterPressed then
+            submit()
+        end
+    end)
+
+    -- Submit Button with gradient and effects
     local SubmitButton = Instance.new("TextButton")
     SubmitButton.BackgroundColor3 = color
     SubmitButton.BorderSizePixel = 0
-    SubmitButton.Size = UDim2.new(1, -20, 0, 35)
-    SubmitButton.Position = UDim2.new(0, 10, 1, -45)
+    SubmitButton.Size = UDim2.new(1, -20, 0, 40)
+    SubmitButton.Position = UDim2.new(0, 10, 1, -50)
     SubmitButton.Font = Enum.Font.GothamBold
-    SubmitButton.Text = "Submit"
+    SubmitButton.Text = "✓ Submit"
     SubmitButton.TextColor3 = Config.TextColor
-    SubmitButton.TextSize = 14
+    SubmitButton.TextSize = 16
+    SubmitButton.ZIndex = 2
     SubmitButton.Parent = frame
 
-    AddCorner(SubmitButton, UDim.new(0, 8))
+    AddCorner(SubmitButton, UDim.new(0, 10))
+    AddGradient(SubmitButton, color, Config.AccentColor, 45)
+    AddStroke(SubmitButton, Config.TextColor, 2)
+
+    -- Button glow
+    local buttonGlow = AddGlow(SubmitButton, color)
+    buttonGlow.ImageTransparency = 0.6
+
+    -- Button shine effect
+    local buttonShine = Instance.new("Frame")
+    buttonShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    buttonShine.BackgroundTransparency = 0.8
+    buttonShine.BorderSizePixel = 0
+    buttonShine.Size = UDim2.new(0, 30, 1.5, 0)
+    buttonShine.Position = UDim2.new(-0.1, 0, -0.25, 0)
+    buttonShine.Rotation = 20
+    buttonShine.ZIndex = 3
+    buttonShine.Parent = SubmitButton
 
     local function submit()
         local inputText = InputBox.Text
@@ -504,22 +587,16 @@ function Library:Input(options)
 
     SubmitButton.MouseButton1Click:Connect(submit)
 
-    InputBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            submit()
-        end
-    end)
-
     SubmitButton.MouseEnter:Connect(function()
-        CreateTween(SubmitButton, {BackgroundColor3 = Color3.fromRGB(
-            math.clamp(color.R * 255 + 30, 0, 255),
-            math.clamp(color.G * 255 + 30, 0, 255),
-            math.clamp(color.B * 255 + 30, 0, 255)
-        ):ToColor3()}, 0.2):Play()
+        CreateTween(SubmitButton, {Size = UDim2.new(1, -20, 0, 43)}, 0.15):Play()
+        CreateTween(buttonGlow, {ImageTransparency = 0.3}, 0.2):Play()
+        CreateTween(buttonShine, {Position = UDim2.new(1.1, 0, -0.25, 0)}, 0.5, Enum.EasingStyle.Quad):Play()
     end)
 
     SubmitButton.MouseLeave:Connect(function()
-        CreateTween(SubmitButton, {BackgroundColor3 = color}, 0.2):Play()
+        CreateTween(SubmitButton, {Size = UDim2.new(1, -20, 0, 40)}, 0.15):Play()
+        CreateTween(buttonGlow, {ImageTransparency = 0.6}, 0.2):Play()
+        buttonShine.Position = UDim2.new(-0.1, 0, -0.25, 0)
     end)
 
     return frame
@@ -527,6 +604,10 @@ end
 
 -- 5. Image Notification (with icon/image)
 function Library:Image(options)
+    if type(options) ~= "table" then
+        options = {Text = tostring(options)}
+    end
+
     local text = options.Text or "Notification"
     local imageId = options.ImageId or "rbxassetid://0"
     local duration = options.Duration or Config.DefaultDuration
