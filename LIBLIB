@@ -1,0 +1,652 @@
+-- lib1.lua - Modern Blue GUI Library
+-- GitHub Ready - Easy to edit and customize
+-- Author: Created with Claude
+-- Version: 1.0.0
+
+local Library = {}
+Library.__index = Library
+
+-- Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+
+-- Configuration
+local Config = {
+    -- Colors (Blue Textile Theme)
+    PrimaryColor = Color3.fromRGB(41, 128, 185),      -- Ocean Blue
+    SecondaryColor = Color3.fromRGB(52, 152, 219),    -- Lighter Blue
+    AccentColor = Color3.fromRGB(26, 188, 156),       -- Turquoise
+    BackgroundColor = Color3.fromRGB(23, 32, 42),     -- Dark Blue-Gray
+    TextColor = Color3.fromRGB(236, 240, 241),        -- Off-White
+    BorderColor = Color3.fromRGB(52, 73, 94),         -- Steel Blue
+
+    -- Animation Settings
+    AnimationSpeed = 0.3,
+    EasingStyle = Enum.EasingStyle.Quad,
+    EasingDirection = Enum.EasingDirection.Out,
+
+    -- GUI Settings
+    CornerRadius = UDim.new(0, 8),
+    Padding = 10,
+    ButtonHeight = 35,
+
+    -- Position (Right side of screen)
+    StartPosition = UDim2.new(1, -320, 0.5, -250),
+    Size = UDim2.new(0, 300, 0, 500)
+}
+
+-- Utility Functions
+local function CreateTween(instance, properties, duration)
+    duration = duration or Config.AnimationSpeed
+    local tweenInfo = TweenInfo.new(
+        duration,
+        Config.EasingStyle,
+        Config.EasingDirection
+    )
+    return TweenService:Create(instance, tweenInfo, properties)
+end
+
+local function AddCorner(instance, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = radius or Config.CornerRadius
+    corner.Parent = instance
+    return corner
+end
+
+local function AddStroke(instance, color, thickness)
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Config.BorderColor
+    stroke.Thickness = thickness or 1
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = instance
+    return stroke
+end
+
+local function AddGradient(instance)
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))
+    }
+    gradient.Rotation = 90
+    gradient.Parent = instance
+    return gradient
+end
+
+local function AddGlow(instance)
+    local glow = Instance.new("ImageLabel")
+    glow.Name = "Glow"
+    glow.BackgroundTransparency = 1
+    glow.Image = "rbxasset://textures/ui/Glow.png"
+    glow.ImageColor3 = Config.AccentColor
+    glow.ImageTransparency = 0.7
+    glow.Size = UDim2.new(1, 30, 1, 30)
+    glow.Position = UDim2.new(0, -15, 0, -15)
+    glow.ZIndex = 0
+    glow.Parent = instance
+
+    -- Pulse animation
+    spawn(function()
+        while glow.Parent do
+            CreateTween(glow, {ImageTransparency = 0.5}, 1):Play()
+            wait(1)
+            CreateTween(glow, {ImageTransparency = 0.8}, 1):Play()
+            wait(1)
+        end
+    end)
+
+    return glow
+end
+
+-- Check for existing GUI and handle stacking
+local function HandleExistingGUI(parent)
+    local existingGUIs = {}
+    for _, child in ipairs(parent:GetChildren()) do
+        if child.Name == "ModernBlueGUI" and child:IsA("ScreenGui") then
+            table.insert(existingGUIs, child)
+        end
+    end
+
+    if #existingGUIs > 0 then
+        -- Stack animation - move existing GUIs up and fade out
+        for i, gui in ipairs(existingGUIs) do
+            local mainFrame = gui:FindFirstChild("MainFrame")
+            if mainFrame then
+                CreateTween(mainFrame, {
+                    Position = UDim2.new(mainFrame.Position.X.Scale, mainFrame.Position.X.Offset,
+                                        mainFrame.Position.Y.Scale, mainFrame.Position.Y.Offset - 50)
+                }, 0.2):Play()
+                CreateTween(mainFrame, {BackgroundTransparency = 1}, 0.2):Play()
+
+                -- Fade out all children
+                for _, child in ipairs(mainFrame:GetDescendants()) do
+                    if child:IsA("GuiObject") then
+                        CreateTween(child, {BackgroundTransparency = 1}, 0.2):Play()
+                        if child:IsA("TextLabel") or child:IsA("TextButton") then
+                            CreateTween(child, {TextTransparency = 1}, 0.2):Play()
+                        end
+                    end
+                end
+
+                -- Destroy after animation
+                task.delay(0.3, function()
+                    gui:Destroy()
+                end)
+            end
+        end
+
+        -- Wait for animation to complete
+        wait(0.3)
+    end
+end
+
+-- Main Library Functions
+function Library:CreateWindow(title)
+    local Window = {}
+
+    -- Handle existing GUIs
+    local parent = CoreGui
+    if not pcall(function() return CoreGui end) then
+        parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    HandleExistingGUI(parent)
+
+    -- Create ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "ModernBlueGUI"
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = parent
+
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.BackgroundColor3 = Config.BackgroundColor
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Position = UDim2.new(1.5, 0, 0.5, -250) -- Start off-screen
+    MainFrame.Size = Config.Size
+    MainFrame.Parent = ScreenGui
+
+    AddCorner(MainFrame)
+    AddStroke(MainFrame, Config.PrimaryColor, 2)
+    AddGlow(MainFrame)
+
+    -- Slide in animation
+    CreateTween(MainFrame, {Position = Config.StartPosition}, 0.5):Play()
+
+    -- Header
+    local Header = Instance.new("Frame")
+    Header.Name = "Header"
+    Header.BackgroundColor3 = Config.PrimaryColor
+    Header.BorderSizePixel = 0
+    Header.Size = UDim2.new(1, 0, 0, 50)
+    Header.Parent = MainFrame
+
+    AddCorner(Header, UDim.new(0, 8))
+    AddGradient(Header)
+
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.BackgroundTransparency = 1
+    Title.Size = UDim2.new(1, -60, 1, 0)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.Font = Enum.Font.GothamBold
+    Title.Text = title or "Modern GUI"
+    Title.TextColor3 = Config.TextColor
+    Title.TextSize = 18
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = Header
+
+    -- Close Button
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Name = "CloseButton"
+    CloseButton.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
+    CloseButton.BorderSizePixel = 0
+    CloseButton.Size = UDim2.new(0, 30, 0, 30)
+    CloseButton.Position = UDim2.new(1, -40, 0.5, -15)
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.Text = "X"
+    CloseButton.TextColor3 = Config.TextColor
+    CloseButton.TextSize = 16
+    CloseButton.Parent = Header
+
+    AddCorner(CloseButton, UDim.new(0, 6))
+
+    CloseButton.MouseButton1Click:Connect(function()
+        CreateTween(CloseButton, {BackgroundColor3 = Color3.fromRGB(192, 57, 43)}, 0.1):Play()
+        CreateTween(MainFrame, {Position = UDim2.new(1.5, 0, 0.5, -250)}, 0.4):Play()
+        wait(0.4)
+        ScreenGui:Destroy()
+    end)
+
+    CloseButton.MouseEnter:Connect(function()
+        CreateTween(CloseButton, {Size = UDim2.new(0, 33, 0, 33)}, 0.2):Play()
+    end)
+
+    CloseButton.MouseLeave:Connect(function()
+        CreateTween(CloseButton, {Size = UDim2.new(0, 30, 0, 30)}, 0.2):Play()
+    end)
+
+    -- Minimize Button
+    local MinimizeButton = Instance.new("TextButton")
+    MinimizeButton.Name = "MinimizeButton"
+    MinimizeButton.BackgroundColor3 = Config.AccentColor
+    MinimizeButton.BorderSizePixel = 0
+    MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
+    MinimizeButton.Position = UDim2.new(1, -75, 0.5, -15)
+    MinimizeButton.Font = Enum.Font.GothamBold
+    MinimizeButton.Text = "-"
+    MinimizeButton.TextColor3 = Config.TextColor
+    MinimizeButton.TextSize = 20
+    MinimizeButton.Parent = Header
+
+    AddCorner(MinimizeButton, UDim.new(0, 6))
+
+    local isMinimized = false
+    MinimizeButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        if isMinimized then
+            CreateTween(MainFrame, {Size = UDim2.new(0, 300, 0, 50)}, 0.3):Play()
+            MinimizeButton.Text = "+"
+        else
+            CreateTween(MainFrame, {Size = Config.Size}, 0.3):Play()
+            MinimizeButton.Text = "-"
+        end
+    end)
+
+    MinimizeButton.MouseEnter:Connect(function()
+        CreateTween(MinimizeButton, {BackgroundColor3 = Color3.fromRGB(22, 160, 133)}, 0.2):Play()
+    end)
+
+    MinimizeButton.MouseLeave:Connect(function()
+        CreateTween(MinimizeButton, {BackgroundColor3 = Config.AccentColor}, 0.2):Play()
+    end)
+
+    -- Content Container
+    local ContentContainer = Instance.new("ScrollingFrame")
+    ContentContainer.Name = "ContentContainer"
+    ContentContainer.BackgroundTransparency = 1
+    ContentContainer.BorderSizePixel = 0
+    ContentContainer.Position = UDim2.new(0, 0, 0, 60)
+    ContentContainer.Size = UDim2.new(1, 0, 1, -70)
+    ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ContentContainer.ScrollBarThickness = 4
+    ContentContainer.ScrollBarImageColor3 = Config.PrimaryColor
+    ContentContainer.Parent = MainFrame
+
+    -- Auto-resize canvas
+    local function UpdateCanvasSize()
+        local contentSize = 0
+        for _, child in ipairs(ContentContainer:GetChildren()) do
+            if child:IsA("GuiObject") and child.Visible then
+                contentSize = contentSize + child.Size.Y.Offset + Config.Padding
+            end
+        end
+        ContentContainer.CanvasSize = UDim2.new(0, 0, 0, contentSize)
+    end
+
+    ContentContainer.ChildAdded:Connect(UpdateCanvasSize)
+    ContentContainer.ChildRemoved:Connect(UpdateCanvasSize)
+
+    -- Dragging functionality
+    local dragging = false
+    local dragInput, mousePos, framePos
+
+    Header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            mousePos = input.Position
+            framePos = MainFrame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    Header.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - mousePos
+            MainFrame.Position = UDim2.new(
+                framePos.X.Scale,
+                framePos.X.Offset + delta.X,
+                framePos.Y.Scale,
+                framePos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    -- Window Functions
+    function Window:AddButton(text, callback)
+        local Button = Instance.new("TextButton")
+        Button.Name = "Button"
+        Button.BackgroundColor3 = Config.SecondaryColor
+        Button.BorderSizePixel = 0
+        Button.Size = UDim2.new(1, -20, 0, Config.ButtonHeight)
+        Button.Position = UDim2.new(0, 10, 0, (#ContentContainer:GetChildren() * (Config.ButtonHeight + Config.Padding)) + Config.Padding)
+        Button.Font = Enum.Font.Gotham
+        Button.Text = text
+        Button.TextColor3 = Config.TextColor
+        Button.TextSize = 14
+        Button.Parent = ContentContainer
+
+        AddCorner(Button)
+        AddStroke(Button, Config.PrimaryColor, 1)
+
+        -- Ripple effect
+        Button.MouseButton1Click:Connect(function()
+            local Ripple = Instance.new("Frame")
+            Ripple.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Ripple.BackgroundTransparency = 0.5
+            Ripple.BorderSizePixel = 0
+            Ripple.Size = UDim2.new(0, 0, 0, 0)
+            Ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
+            Ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+            Ripple.Parent = Button
+
+            AddCorner(Ripple, UDim.new(1, 0))
+
+            CreateTween(Ripple, {
+                Size = UDim2.new(2, 0, 2, 0),
+                BackgroundTransparency = 1
+            }, 0.5):Play()
+
+            task.delay(0.5, function()
+                Ripple:Destroy()
+            end)
+
+            if callback then
+                callback()
+            end
+        end)
+
+        Button.MouseEnter:Connect(function()
+            CreateTween(Button, {BackgroundColor3 = Config.PrimaryColor}, 0.2):Play()
+        end)
+
+        Button.MouseLeave:Connect(function()
+            CreateTween(Button, {BackgroundColor3 = Config.SecondaryColor}, 0.2):Play()
+        end)
+
+        UpdateCanvasSize()
+        return Button
+    end
+
+    function Window:AddToggle(text, default, callback)
+        local ToggleFrame = Instance.new("Frame")
+        ToggleFrame.Name = "ToggleFrame"
+        ToggleFrame.BackgroundColor3 = Config.BackgroundColor
+        ToggleFrame.BorderSizePixel = 0
+        ToggleFrame.Size = UDim2.new(1, -20, 0, Config.ButtonHeight)
+        ToggleFrame.Position = UDim2.new(0, 10, 0, (#ContentContainer:GetChildren() * (Config.ButtonHeight + Config.Padding)) + Config.Padding)
+        ToggleFrame.Parent = ContentContainer
+
+        AddCorner(ToggleFrame)
+        AddStroke(ToggleFrame, Config.BorderColor, 1)
+
+        local Label = Instance.new("TextLabel")
+        Label.BackgroundTransparency = 1
+        Label.Size = UDim2.new(1, -60, 1, 0)
+        Label.Position = UDim2.new(0, 10, 0, 0)
+        Label.Font = Enum.Font.Gotham
+        Label.Text = text
+        Label.TextColor3 = Config.TextColor
+        Label.TextSize = 14
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = ToggleFrame
+
+        local ToggleButton = Instance.new("TextButton")
+        ToggleButton.Name = "ToggleButton"
+        ToggleButton.BackgroundColor3 = default and Config.AccentColor or Config.BorderColor
+        ToggleButton.BorderSizePixel = 0
+        ToggleButton.Size = UDim2.new(0, 45, 0, 20)
+        ToggleButton.Position = UDim2.new(1, -55, 0.5, -10)
+        ToggleButton.Text = ""
+        ToggleButton.Parent = ToggleFrame
+
+        AddCorner(ToggleButton, UDim.new(1, 0))
+
+        local ToggleIndicator = Instance.new("Frame")
+        ToggleIndicator.BackgroundColor3 = Config.TextColor
+        ToggleIndicator.BorderSizePixel = 0
+        ToggleIndicator.Size = UDim2.new(0, 16, 0, 16)
+        ToggleIndicator.Position = default and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        ToggleIndicator.Parent = ToggleButton
+
+        AddCorner(ToggleIndicator, UDim.new(1, 0))
+
+        local toggled = default
+
+        ToggleButton.MouseButton1Click:Connect(function()
+            toggled = not toggled
+
+            CreateTween(ToggleButton, {
+                BackgroundColor3 = toggled and Config.AccentColor or Config.BorderColor
+            }, 0.2):Play()
+
+            CreateTween(ToggleIndicator, {
+                Position = toggled and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+            }, 0.2):Play()
+
+            if callback then
+                callback(toggled)
+            end
+        end)
+
+        UpdateCanvasSize()
+        return ToggleFrame
+    end
+
+    function Window:AddSlider(text, min, max, default, callback)
+        local SliderFrame = Instance.new("Frame")
+        SliderFrame.Name = "SliderFrame"
+        SliderFrame.BackgroundColor3 = Config.BackgroundColor
+        SliderFrame.BorderSizePixel = 0
+        SliderFrame.Size = UDim2.new(1, -20, 0, 60)
+        SliderFrame.Position = UDim2.new(0, 10, 0, (#ContentContainer:GetChildren() * (Config.ButtonHeight + Config.Padding)) + Config.Padding)
+        SliderFrame.Parent = ContentContainer
+
+        AddCorner(SliderFrame)
+        AddStroke(SliderFrame, Config.BorderColor, 1)
+
+        local Label = Instance.new("TextLabel")
+        Label.BackgroundTransparency = 1
+        Label.Size = UDim2.new(1, -20, 0, 20)
+        Label.Position = UDim2.new(0, 10, 0, 5)
+        Label.Font = Enum.Font.Gotham
+        Label.Text = text
+        Label.TextColor3 = Config.TextColor
+        Label.TextSize = 14
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = SliderFrame
+
+        local ValueLabel = Instance.new("TextLabel")
+        ValueLabel.BackgroundTransparency = 1
+        ValueLabel.Size = UDim2.new(0, 50, 0, 20)
+        ValueLabel.Position = UDim2.new(1, -60, 0, 5)
+        ValueLabel.Font = Enum.Font.GothamBold
+        ValueLabel.Text = tostring(default)
+        ValueLabel.TextColor3 = Config.AccentColor
+        ValueLabel.TextSize = 14
+        ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        ValueLabel.Parent = SliderFrame
+
+        local SliderBack = Instance.new("Frame")
+        SliderBack.BackgroundColor3 = Config.BorderColor
+        SliderBack.BorderSizePixel = 0
+        SliderBack.Size = UDim2.new(1, -20, 0, 6)
+        SliderBack.Position = UDim2.new(0, 10, 1, -15)
+        SliderBack.Parent = SliderFrame
+
+        AddCorner(SliderBack, UDim.new(1, 0))
+
+        local SliderFill = Instance.new("Frame")
+        SliderFill.BackgroundColor3 = Config.PrimaryColor
+        SliderFill.BorderSizePixel = 0
+        SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+        SliderFill.Parent = SliderBack
+
+        AddCorner(SliderFill, UDim.new(1, 0))
+
+        local SliderButton = Instance.new("TextButton")
+        SliderButton.BackgroundColor3 = Config.AccentColor
+        SliderButton.BorderSizePixel = 0
+        SliderButton.Size = UDim2.new(0, 16, 0, 16)
+        SliderButton.Position = UDim2.new((default - min) / (max - min), -8, 0.5, -8)
+        SliderButton.Text = ""
+        SliderButton.Parent = SliderBack
+
+        AddCorner(SliderButton, UDim.new(1, 0))
+
+        local dragging = false
+
+        local function UpdateSlider(input)
+            local pos = math.clamp((input.Position.X - SliderBack.AbsolutePosition.X) / SliderBack.AbsoluteSize.X, 0, 1)
+            local value = math.floor(min + (max - min) * pos)
+
+            SliderFill.Size = UDim2.new(pos, 0, 1, 0)
+            SliderButton.Position = UDim2.new(pos, -8, 0.5, -8)
+            ValueLabel.Text = tostring(value)
+
+            if callback then
+                callback(value)
+            end
+        end
+
+        SliderButton.MouseButton1Down:Connect(function()
+            dragging = true
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                UpdateSlider(input)
+            end
+        end)
+
+        SliderBack.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                UpdateSlider(input)
+            end
+        end)
+
+        UpdateCanvasSize()
+        return SliderFrame
+    end
+
+    function Window:AddTextbox(text, placeholder, callback)
+        local TextboxFrame = Instance.new("Frame")
+        TextboxFrame.Name = "TextboxFrame"
+        TextboxFrame.BackgroundColor3 = Config.BackgroundColor
+        TextboxFrame.BorderSizePixel = 0
+        TextboxFrame.Size = UDim2.new(1, -20, 0, 70)
+        TextboxFrame.Position = UDim2.new(0, 10, 0, (#ContentContainer:GetChildren() * (Config.ButtonHeight + Config.Padding)) + Config.Padding)
+        TextboxFrame.Parent = ContentContainer
+
+        AddCorner(TextboxFrame)
+        AddStroke(TextboxFrame, Config.BorderColor, 1)
+
+        local Label = Instance.new("TextLabel")
+        Label.BackgroundTransparency = 1
+        Label.Size = UDim2.new(1, -20, 0, 20)
+        Label.Position = UDim2.new(0, 10, 0, 5)
+        Label.Font = Enum.Font.Gotham
+        Label.Text = text
+        Label.TextColor3 = Config.TextColor
+        Label.TextSize = 14
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = TextboxFrame
+
+        local Textbox = Instance.new("TextBox")
+        Textbox.BackgroundColor3 = Config.BorderColor
+        Textbox.BorderSizePixel = 0
+        Textbox.Size = UDim2.new(1, -20, 0, 30)
+        Textbox.Position = UDim2.new(0, 10, 0, 30)
+        Textbox.Font = Enum.Font.Gotham
+        Textbox.PlaceholderText = placeholder or ""
+        Textbox.Text = ""
+        Textbox.TextColor3 = Config.TextColor
+        Textbox.TextSize = 13
+        Textbox.ClearTextOnFocus = false
+        Textbox.Parent = TextboxFrame
+
+        AddCorner(Textbox)
+
+        local TextboxPadding = Instance.new("UIPadding")
+        TextboxPadding.PaddingLeft = UDim.new(0, 8)
+        TextboxPadding.PaddingRight = UDim.new(0, 8)
+        TextboxPadding.Parent = Textbox
+
+        Textbox.Focused:Connect(function()
+            CreateTween(Textbox, {BackgroundColor3 = Config.SecondaryColor}, 0.2):Play()
+        end)
+
+        Textbox.FocusLost:Connect(function(enterPressed)
+            CreateTween(Textbox, {BackgroundColor3 = Config.BorderColor}, 0.2):Play()
+            if enterPressed and callback then
+                callback(Textbox.Text)
+            end
+        end)
+
+        UpdateCanvasSize()
+        return Textbox
+    end
+
+    function Window:AddLabel(text)
+        local Label = Instance.new("TextLabel")
+        Label.Name = "Label"
+        Label.BackgroundColor3 = Config.BackgroundColor
+        Label.BorderSizePixel = 0
+        Label.Size = UDim2.new(1, -20, 0, 30)
+        Label.Position = UDim2.new(0, 10, 0, (#ContentContainer:GetChildren() * (Config.ButtonHeight + Config.Padding)) + Config.Padding)
+        Label.Font = Enum.Font.Gotham
+        Label.Text = text
+        Label.TextColor3 = Config.TextColor
+        Label.TextSize = 14
+        Label.TextWrapped = true
+        Label.Parent = ContentContainer
+
+        AddCorner(Label)
+        AddStroke(Label, Config.BorderColor, 1)
+
+        UpdateCanvasSize()
+        return Label
+    end
+
+    function Window:AddDivider()
+        local Divider = Instance.new("Frame")
+        Divider.Name = "Divider"
+        Divider.BackgroundColor3 = Config.PrimaryColor
+        Divider.BorderSizePixel = 0
+        Divider.Size = UDim2.new(1, -20, 0, 2)
+        Divider.Position = UDim2.new(0, 10, 0, (#ContentContainer:GetChildren() * (Config.ButtonHeight + Config.Padding)) + Config.Padding)
+        Divider.Parent = ContentContainer
+
+        AddCorner(Divider, UDim.new(1, 0))
+
+        UpdateCanvasSize()
+        return Divider
+    end
+
+    return Window
+end
+
+return Library
