@@ -315,45 +315,6 @@ function Library:Notify(options)
     textShadow.ZIndex = 2
     textShadow.Parent = frame
 
-    for i = 1, 3 do
-        local shimmer = Instance.new("Frame")
-        shimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        shimmer.BackgroundTransparency = 0.6
-        shimmer.BorderSizePixel = 0
-        shimmer.Size = UDim2.new(0, 40, 2, 0)
-        shimmer.Position = UDim2.new(-0.2, 0, -0.5, 0)
-        shimmer.Rotation = 45
-        shimmer.ZIndex = 10
-        shimmer.Parent = frame
-
-        spawn(function()
-            wait(0.2 + i * 0.4)
-            while shimmer and shimmer.Parent do
-                CreateTween(shimmer, {Position = UDim2.new(1.2, 0, -0.5, 0)}, 1.2, Enum.EasingStyle.Linear):Play()
-                wait(2)
-                shimmer.Position = UDim2.new(-0.2, 0, -0.5, 0)
-                wait(0.5)
-            end
-        end)
-    end
-
-    local scanline = Instance.new("Frame")
-    scanline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    scanline.BackgroundTransparency = 0.85
-    scanline.BorderSizePixel = 0
-    scanline.Size = UDim2.new(1, 0, 0, 2)
-    scanline.Position = UDim2.new(0, 0, 0, 0)
-    scanline.ZIndex = 9
-    scanline.Parent = frame
-
-    spawn(function()
-        while scanline and scanline.Parent do
-            CreateTween(scanline, {Position = UDim2.new(0, 0, 1, 0)}, 1.5, Enum.EasingStyle.Linear):Play()
-            wait(1.5)
-            scanline.Position = UDim2.new(0, 0, 0, 0)
-            wait(0.3)
-        end
-    end)
 
     task.delay(duration, function()
         if frame and frame.Parent then
@@ -984,8 +945,7 @@ function Library:Success(text, duration)
     return self:Notify({
         Text = text or "Success!",
         Duration = duration or Config.DefaultDuration,
-        Color = Config.SuccessColor,
-        Icon = "✓"
+        Color = Config.SuccessColor
     })
 end
 
@@ -993,8 +953,7 @@ function Library:Error(text, duration)
     return self:Notify({
         Text = text or "Error!",
         Duration = duration or Config.DefaultDuration,
-        Color = Config.ErrorColor,
-        Icon = "✗"
+        Color = Config.ErrorColor
     })
 end
 
@@ -1002,8 +961,7 @@ function Library:Warning(text, duration)
     return self:Notify({
         Text = text or "Warning!",
         Duration = duration or Config.DefaultDuration,
-        Color = Config.WarningColor,
-        Icon = "⚠"
+        Color = Config.WarningColor
     })
 end
 
@@ -1014,6 +972,542 @@ function Library:ClearAll()
         end
     end
     activeNotifications = {}
+end
+
+function Library:Gif(options)
+    local text = options.Text or "Notification"
+    local gifId = options.GifId or "rbxassetid://0"
+    local duration = options.Duration or Config.DefaultDuration
+    local color = options.Color or Config.PrimaryColor
+
+    local frame = CreateNotificationFrame(120)
+
+    local bgGrad = AddGradient(frame, color, Config.AccentColor, 90)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
+
+    AddStroke(frame, color, 3)
+    AddGlow(frame, color)
+
+    local gifShadow = Instance.new("Frame")
+    gifShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    gifShadow.BackgroundTransparency = 0.5
+    gifShadow.BorderSizePixel = 0
+    gifShadow.Size = UDim2.new(0, 85, 0, 85)
+    gifShadow.Position = UDim2.new(0, 13, 0.5, -40)
+    gifShadow.ZIndex = 1
+    gifShadow.Parent = frame
+    AddCorner(gifShadow, UDim.new(0, 12))
+
+    local gifLabel = Instance.new("ImageLabel")
+    gifLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    gifLabel.BorderSizePixel = 0
+    gifLabel.Size = UDim2.new(0, 85, 0, 85)
+    gifLabel.Position = UDim2.new(0, 10, 0.5, -42.5)
+    gifLabel.Image = gifId
+    gifLabel.ZIndex = 2
+    gifLabel.Parent = frame
+
+    AddCorner(gifLabel, UDim.new(0, 12))
+    AddStroke(gifLabel, color, 2)
+
+    local gifGlow = AddGlow(gifLabel, color)
+    gifGlow.ImageTransparency = 0.5
+
+    spawn(function()
+        while gifLabel and gifLabel.Parent do
+            CreateTween(gifLabel, {Size = UDim2.new(0, 90, 0, 90)}, 0.6, Enum.EasingStyle.Sine):Play()
+            wait(0.6)
+            CreateTween(gifLabel, {Size = UDim2.new(0, 85, 0, 85)}, 0.6, Enum.EasingStyle.Sine):Play()
+            wait(0.6)
+        end
+    end)
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -115, 1, -20)
+    textLabel.Position = UDim2.new(0, 105, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Top
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    for i = 1, 10 do
+        local particle = Instance.new("Frame")
+        particle.BackgroundColor3 = color
+        particle.BorderSizePixel = 0
+        particle.Size = UDim2.new(0, 3, 0, 3)
+        particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        particle.BackgroundTransparency = math.random(50, 80) / 100
+        particle.ZIndex = 7
+        particle.Parent = frame
+        AddCorner(particle, UDim.new(1, 0))
+
+        spawn(function()
+            while particle and particle.Parent do
+                CreateTween(particle, {
+                    Position = UDim2.new(math.random(), 0, math.random(), 0),
+                    BackgroundTransparency = math.random(40, 85) / 100
+                }, 1.8 + math.random(), Enum.EasingStyle.Sine):Play()
+                wait(1.8 + math.random())
+            end
+        end)
+    end
+
+    task.delay(duration, function()
+        if frame and frame.Parent then
+            DismissNotification(frame)
+        end
+    end)
+
+    return frame
+end
+
+function Library:Countdown(options)
+    local text = options.Text or "Countdown"
+    local startTime = options.Time or 10
+    local callback = options.Callback or function() end
+    local color = options.Color or Config.WarningColor
+
+    local frame = CreateNotificationFrame(100)
+
+    local bgGrad = AddGradient(frame, color, Config.ErrorColor, 180)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 4 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.05)
+            end
+        end
+    end)
+
+    AddStroke(frame, color, 3)
+
+    local mainGlow = AddGlow(frame, color)
+    spawn(function()
+        while mainGlow and mainGlow.Parent do
+            CreateTween(mainGlow, {ImageTransparency = 0.2}, 0.5, Enum.EasingStyle.Sine):Play()
+            wait(0.5)
+            CreateTween(mainGlow, {ImageTransparency = 0.6}, 0.5, Enum.EasingStyle.Sine):Play()
+            wait(0.5)
+        end
+    end)
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -100, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    local timerLabel = Instance.new("TextLabel")
+    timerLabel.BackgroundTransparency = 1
+    timerLabel.Size = UDim2.new(0, 80, 1, 0)
+    timerLabel.Position = UDim2.new(1, -85, 0, 0)
+    timerLabel.Font = Enum.Font.GothamBold
+    timerLabel.Text = tostring(startTime)
+    timerLabel.TextColor3 = Config.TextColor
+    timerLabel.TextSize = 32
+    timerLabel.ZIndex = 3
+    timerLabel.Parent = frame
+
+    spawn(function()
+        for i = startTime, 0, -1 do
+            if not timerLabel or not timerLabel.Parent then break end
+            timerLabel.Text = tostring(i)
+            CreateTween(timerLabel, {TextSize = 36}, 0.2):Play()
+            wait(0.2)
+            CreateTween(timerLabel, {TextSize = 32}, 0.3):Play()
+            wait(0.8)
+        end
+        callback()
+        DismissNotification(frame)
+    end)
+
+    return frame
+end
+
+function Library:Poll(options)
+    local question = options.Question or "Vote now"
+    local choices = options.Choices or {"Option 1", "Option 2"}
+    local callback = options.Callback or function() end
+    local color = options.Color or Config.AccentColor
+
+    local frame = CreateNotificationFrame(80 + (#choices * 40))
+
+    local bgGrad = AddGradient(frame, color, Config.PrimaryColor, 45)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
+
+    AddStroke(frame, color, 3)
+    AddGlow(frame, color)
+
+    local questionLabel = Instance.new("TextLabel")
+    questionLabel.BackgroundTransparency = 1
+    questionLabel.Size = UDim2.new(1, -20, 0, 40)
+    questionLabel.Position = UDim2.new(0, 10, 0, 10)
+    questionLabel.Font = Enum.Font.GothamBold
+    questionLabel.Text = question
+    questionLabel.TextColor3 = Config.TextColor
+    questionLabel.TextSize = 16
+    questionLabel.TextWrapped = true
+    questionLabel.ZIndex = 3
+    questionLabel.Parent = frame
+
+    for i, choice in ipairs(choices) do
+        local choiceButton = Instance.new("TextButton")
+        choiceButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        choiceButton.BorderSizePixel = 0
+        choiceButton.Size = UDim2.new(1, -20, 0, 35)
+        choiceButton.Position = UDim2.new(0, 10, 0, 50 + (i - 1) * 40)
+        choiceButton.Font = Enum.Font.GothamBold
+        choiceButton.Text = choice
+        choiceButton.TextColor3 = Config.TextColor
+        choiceButton.TextSize = 14
+        choiceButton.ZIndex = 3
+        choiceButton.Parent = frame
+
+        AddCorner(choiceButton, UDim.new(0, 10))
+        AddStroke(choiceButton, color, 2)
+        AddGradient(choiceButton, Color3.fromRGB(40, 40, 50), Color3.fromRGB(60, 60, 70), 90)
+
+        local btnGlow = AddGlow(choiceButton, color)
+        btnGlow.ImageTransparency = 0.8
+
+        choiceButton.MouseButton1Click:Connect(function()
+            callback(choice, i)
+            DismissNotification(frame, 0.2)
+        end)
+
+        choiceButton.MouseEnter:Connect(function()
+            CreateTween(choiceButton, {Size = UDim2.new(1, -20, 0, 38)}, 0.15):Play()
+            CreateTween(btnGlow, {ImageTransparency = 0.4}, 0.2):Play()
+        end)
+
+        choiceButton.MouseLeave:Connect(function()
+            CreateTween(choiceButton, {Size = UDim2.new(1, -20, 0, 35)}, 0.15):Play()
+            CreateTween(btnGlow, {ImageTransparency = 0.8}, 0.2):Play()
+        end)
+    end
+
+    return frame
+end
+
+function Library:Slider(options)
+    local text = options.Text or "Adjust value"
+    local min = options.Min or 0
+    local max = options.Max or 100
+    local default = options.Default or 50
+    local callback = options.Callback or function() end
+    local color = options.Color or Config.PrimaryColor
+
+    local frame = CreateNotificationFrame(140)
+
+    local bgGrad = AddGradient(frame, color, Config.SecondaryColor, 135)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
+
+    AddStroke(frame, color, 3)
+    AddGlow(frame, color)
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -20, 0, 30)
+    textLabel.Position = UDim2.new(0, 10, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Size = UDim2.new(0, 60, 0, 30)
+    valueLabel.Position = UDim2.new(1, -65, 0, 10)
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.Text = tostring(default)
+    valueLabel.TextColor3 = color
+    valueLabel.TextSize = 18
+    valueLabel.ZIndex = 3
+    valueLabel.Parent = frame
+
+    local sliderBack = Instance.new("Frame")
+    sliderBack.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    sliderBack.BorderSizePixel = 0
+    sliderBack.Size = UDim2.new(1, -20, 0, 20)
+    sliderBack.Position = UDim2.new(0, 10, 0, 50)
+    sliderBack.ZIndex = 2
+    sliderBack.Parent = frame
+
+    AddCorner(sliderBack, UDim.new(1, 0))
+    AddStroke(sliderBack, color, 2)
+
+    local sliderFill = Instance.new("Frame")
+    sliderFill.BackgroundColor3 = color
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    sliderFill.ZIndex = 3
+    sliderFill.Parent = sliderBack
+
+    AddCorner(sliderFill, UDim.new(1, 0))
+    AddGradient(sliderFill, color, Config.AccentColor, 0)
+
+    local sliderButton = Instance.new("TextButton")
+    sliderButton.BackgroundColor3 = Config.TextColor
+    sliderButton.BorderSizePixel = 0
+    sliderButton.Size = UDim2.new(0, 24, 0, 24)
+    sliderButton.Position = UDim2.new((default - min) / (max - min), -12, 0.5, -12)
+    sliderButton.Text = ""
+    sliderButton.ZIndex = 4
+    sliderButton.Parent = sliderBack
+
+    AddCorner(sliderButton, UDim.new(1, 0))
+    AddStroke(sliderButton, color, 3)
+
+    local dragging = false
+
+    sliderButton.MouseButton1Down:Connect(function()
+        dragging = true
+    end)
+
+    game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if dragging then
+            local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+            local relativeX = math.clamp(mouse.X - sliderBack.AbsolutePosition.X, 0, sliderBack.AbsoluteSize.X)
+            local percentage = relativeX / sliderBack.AbsoluteSize.X
+            local value = math.floor(min + (max - min) * percentage)
+
+            sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+            sliderButton.Position = UDim2.new(percentage, -12, 0.5, -12)
+            valueLabel.Text = tostring(value)
+        end
+    end)
+
+    local submitButton = Instance.new("TextButton")
+    submitButton.BackgroundColor3 = color
+    submitButton.BorderSizePixel = 0
+    submitButton.Size = UDim2.new(1, -20, 0, 40)
+    submitButton.Position = UDim2.new(0, 10, 1, -50)
+    submitButton.Font = Enum.Font.GothamBold
+    submitButton.Text = "Confirm"
+    submitButton.TextColor3 = Config.TextColor
+    submitButton.TextSize = 16
+    submitButton.ZIndex = 3
+    submitButton.Parent = frame
+
+    AddCorner(submitButton, UDim.new(0, 10))
+    AddGradient(submitButton, color, Config.AccentColor, 45)
+    AddStroke(submitButton, Config.TextColor, 2)
+
+    submitButton.MouseButton1Click:Connect(function()
+        local finalValue = tonumber(valueLabel.Text)
+        callback(finalValue)
+        DismissNotification(frame, 0.2)
+    end)
+
+    submitButton.MouseEnter:Connect(function()
+        CreateTween(submitButton, {Size = UDim2.new(1, -20, 0, 43)}, 0.15):Play()
+    end)
+
+    submitButton.MouseLeave:Connect(function()
+        CreateTween(submitButton, {Size = UDim2.new(1, -20, 0, 40)}, 0.15):Play()
+    end)
+
+    return frame
+end
+
+function Library:MultiChoice(options)
+    local text = options.Text or "Select options"
+    local choices = options.Choices or {"Option 1", "Option 2", "Option 3"}
+    local callback = options.Callback or function() end
+    local color = options.Color or Config.SecondaryColor
+
+    local frame = CreateNotificationFrame(100 + (#choices * 35))
+
+    local bgGrad = AddGradient(frame, color, Config.AccentColor, 60)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
+
+    AddStroke(frame, color, 3)
+    AddGlow(frame, color)
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -20, 0, 35)
+    textLabel.Position = UDim2.new(0, 10, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    local selected = {}
+
+    for i, choice in ipairs(choices) do
+        local choiceFrame = Instance.new("Frame")
+        choiceFrame.BackgroundTransparency = 1
+        choiceFrame.Size = UDim2.new(1, -20, 0, 30)
+        choiceFrame.Position = UDim2.new(0, 10, 0, 45 + (i - 1) * 35)
+        choiceFrame.ZIndex = 2
+        choiceFrame.Parent = frame
+
+        local checkbox = Instance.new("TextButton")
+        checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        checkbox.BorderSizePixel = 0
+        checkbox.Size = UDim2.new(0, 25, 0, 25)
+        checkbox.Position = UDim2.new(0, 0, 0, 2.5)
+        checkbox.Text = ""
+        checkbox.ZIndex = 3
+        checkbox.Parent = choiceFrame
+
+        AddCorner(checkbox, UDim.new(0, 6))
+        AddStroke(checkbox, color, 2)
+
+        local checkmark = Instance.new("Frame")
+        checkmark.BackgroundColor3 = color
+        checkmark.BorderSizePixel = 0
+        checkmark.Size = UDim2.new(0, 15, 0, 15)
+        checkmark.Position = UDim2.new(0.5, -7.5, 0.5, -7.5)
+        checkmark.BackgroundTransparency = 1
+        checkmark.ZIndex = 4
+        checkmark.Parent = checkbox
+        AddCorner(checkmark, UDim.new(0, 4))
+
+        local choiceLabel = Instance.new("TextLabel")
+        choiceLabel.BackgroundTransparency = 1
+        choiceLabel.Size = UDim2.new(1, -35, 1, 0)
+        choiceLabel.Position = UDim2.new(0, 35, 0, 0)
+        choiceLabel.Font = Enum.Font.Gotham
+        choiceLabel.Text = choice
+        choiceLabel.TextColor3 = Config.TextColor
+        choiceLabel.TextSize = 14
+        choiceLabel.TextXAlignment = Enum.TextXAlignment.Left
+        choiceLabel.ZIndex = 3
+        choiceLabel.Parent = choiceFrame
+
+        checkbox.MouseButton1Click:Connect(function()
+            if selected[choice] then
+                selected[choice] = nil
+                CreateTween(checkmark, {BackgroundTransparency = 1}, 0.2):Play()
+            else
+                selected[choice] = true
+                CreateTween(checkmark, {BackgroundTransparency = 0}, 0.2):Play()
+            end
+        end)
+    end
+
+    local submitButton = Instance.new("TextButton")
+    submitButton.BackgroundColor3 = color
+    submitButton.BorderSizePixel = 0
+    submitButton.Size = UDim2.new(1, -20, 0, 40)
+    submitButton.Position = UDim2.new(0, 10, 1, -50)
+    submitButton.Font = Enum.Font.GothamBold
+    submitButton.Text = "Submit"
+    submitButton.TextColor3 = Config.TextColor
+    submitButton.TextSize = 16
+    submitButton.ZIndex = 3
+    submitButton.Parent = frame
+
+    AddCorner(submitButton, UDim.new(0, 10))
+    AddGradient(submitButton, color, Config.AccentColor, 45)
+    AddStroke(submitButton, Config.TextColor, 2)
+
+    submitButton.MouseButton1Click:Connect(function()
+        local selectedList = {}
+        for choice, _ in pairs(selected) do
+            table.insert(selectedList, choice)
+        end
+        callback(selectedList)
+        DismissNotification(frame, 0.2)
+    end)
+
+    submitButton.MouseEnter:Connect(function()
+        CreateTween(submitButton, {Size = UDim2.new(1, -20, 0, 43)}, 0.15):Play()
+    end)
+
+    submitButton.MouseLeave:Connect(function()
+        CreateTween(submitButton, {Size = UDim2.new(1, -20, 0, 40)}, 0.15):Play()
+    end)
+
+    return frame
+end
+
+function Library:Toast(text, duration)
+    local frame = CreateNotificationFrame(60)
+
+    local color = Config.PrimaryColor
+    local bgGrad = AddGradient(frame, color, Config.SecondaryColor, 90)
+    AddStroke(frame, color, 2)
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -20, 1, 0)
+    textLabel.Position = UDim2.new(0, 10, 0, 0)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text or "Toast"
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 15
+    textLabel.TextWrapped = true
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    task.delay(duration or 2, function()
+        if frame and frame.Parent then
+            DismissNotification(frame)
+        end
+    end)
+
+    return frame
 end
 
 return Library
