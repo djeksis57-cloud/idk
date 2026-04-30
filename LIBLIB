@@ -206,7 +206,6 @@ end
 
 -- Library Functions
 
--- 1. Simple Text Notification
 function Library:Notify(options)
     if type(options) == "string" then
         options = {Text = options}
@@ -215,63 +214,147 @@ function Library:Notify(options)
     local text = options.Text or "Notification"
     local duration = options.Duration or Config.DefaultDuration
     local color = options.Color or Config.PrimaryColor
-    local icon = options.Icon or "✨"
+    local icon = options.Icon
 
     local frame = CreateNotificationFrame(Config.NotificationHeight)
 
-    AddGradient(frame, color, Color3.fromRGB(
+    local bgGradient = AddGradient(frame, color, Color3.fromRGB(
         math.clamp(color.R * 255 + 30, 0, 255),
         math.clamp(color.G * 255 + 30, 0, 255),
         math.clamp(color.B * 255 + 30, 0, 255)
     ), 45)
 
-    AddStroke(frame, color, 2)
-    AddGlow(frame, color)
-
-    -- Icon
-    local Icon = Instance.new("TextLabel")
-    Icon.BackgroundTransparency = 1
-    Icon.Size = UDim2.new(0, 50, 1, 0)
-    Icon.Position = UDim2.new(0, 0, 0, 0)
-    Icon.Font = Enum.Font.GothamBold
-    Icon.Text = icon
-    Icon.TextColor3 = Config.TextColor
-    Icon.TextSize = 32
-    Icon.Parent = frame
-
-    -- Text
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, -60, 1, 0)
-    TextLabel.Position = UDim2.new(0, 55, 0, 0)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = text
-    TextLabel.TextColor3 = Config.TextColor
-    TextLabel.TextSize = 16
-    TextLabel.TextWrapped = true
-    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TextLabel.Parent = frame
-
-    -- Shimmer effect
-    local shimmer = Instance.new("Frame")
-    shimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    shimmer.BackgroundTransparency = 0.7
-    shimmer.BorderSizePixel = 0
-    shimmer.Size = UDim2.new(0, 50, 2, 0)
-    shimmer.Position = UDim2.new(-0.2, 0, -0.5, 0)
-    shimmer.Rotation = 45
-    shimmer.ZIndex = 10
-    shimmer.Parent = frame
-
-    -- Animate shimmer
     spawn(function()
-        wait(0.3)
-        CreateTween(shimmer, {
-            Position = UDim2.new(1.2, 0, -0.5, 0)
-        }, 0.8, Enum.EasingStyle.Linear):Play()
+        while frame and frame.Parent do
+            for i = 0, 360, 2 do
+                if not frame or not frame.Parent then break end
+                bgGradient.Rotation = i
+                wait(0.03)
+            end
+        end
     end)
 
-    -- Auto dismiss
+    local stroke = AddStroke(frame, color, 3)
+    spawn(function()
+        while frame and frame.Parent do
+            CreateTween(stroke, {Thickness = 4}, 0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+            wait(0.6)
+            CreateTween(stroke, {Thickness = 2}, 0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+            wait(0.6)
+        end
+    end)
+
+    AddGlow(frame, color)
+
+    local particles = Instance.new("Frame")
+    particles.BackgroundTransparency = 1
+    particles.Size = UDim2.new(1, 0, 1, 0)
+    particles.ZIndex = 8
+    particles.Parent = frame
+
+    for i = 1, 12 do
+        local dot = Instance.new("Frame")
+        dot.BackgroundColor3 = color
+        dot.BorderSizePixel = 0
+        dot.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
+        dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        dot.BackgroundTransparency = math.random(40, 80) / 100
+        dot.Parent = particles
+        AddCorner(dot, UDim.new(1, 0))
+
+        spawn(function()
+            while dot and dot.Parent do
+                local newPos = UDim2.new(math.random(), 0, math.random(), 0)
+                local newTrans = math.random(30, 90) / 100
+                CreateTween(dot, {Position = newPos, BackgroundTransparency = newTrans},
+                    1.5 + math.random() * 1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+                wait(1.5 + math.random() * 1.5)
+            end
+        end)
+    end
+
+    if icon then
+        local iconLabel = Instance.new("TextLabel")
+        iconLabel.BackgroundTransparency = 1
+        iconLabel.Size = UDim2.new(0, 50, 1, 0)
+        iconLabel.Position = UDim2.new(0, 0, 0, 0)
+        iconLabel.Font = Enum.Font.GothamBold
+        iconLabel.Text = icon
+        iconLabel.TextColor3 = Config.TextColor
+        iconLabel.TextSize = 32
+        iconLabel.ZIndex = 3
+        iconLabel.Parent = frame
+
+        spawn(function()
+            while iconLabel and iconLabel.Parent do
+                CreateTween(iconLabel, {Rotation = 10}, 0.4, Enum.EasingStyle.Sine):Play()
+                wait(0.4)
+                CreateTween(iconLabel, {Rotation = -10}, 0.4, Enum.EasingStyle.Sine):Play()
+                wait(0.4)
+            end
+        end)
+    end
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, icon and -60 or -20, 1, 0)
+    textLabel.Position = UDim2.new(0, icon and 55 or 10, 0, 0)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    local textShadow = textLabel:Clone()
+    textShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+    textShadow.TextTransparency = 0.5
+    textShadow.Position = textLabel.Position + UDim2.new(0, 2, 0, 2)
+    textShadow.ZIndex = 2
+    textShadow.Parent = frame
+
+    for i = 1, 3 do
+        local shimmer = Instance.new("Frame")
+        shimmer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        shimmer.BackgroundTransparency = 0.6
+        shimmer.BorderSizePixel = 0
+        shimmer.Size = UDim2.new(0, 40, 2, 0)
+        shimmer.Position = UDim2.new(-0.2, 0, -0.5, 0)
+        shimmer.Rotation = 45
+        shimmer.ZIndex = 10
+        shimmer.Parent = frame
+
+        spawn(function()
+            wait(0.2 + i * 0.4)
+            while shimmer and shimmer.Parent do
+                CreateTween(shimmer, {Position = UDim2.new(1.2, 0, -0.5, 0)}, 1.2, Enum.EasingStyle.Linear):Play()
+                wait(2)
+                shimmer.Position = UDim2.new(-0.2, 0, -0.5, 0)
+                wait(0.5)
+            end
+        end)
+    end
+
+    local scanline = Instance.new("Frame")
+    scanline.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    scanline.BackgroundTransparency = 0.85
+    scanline.BorderSizePixel = 0
+    scanline.Size = UDim2.new(1, 0, 0, 2)
+    scanline.Position = UDim2.new(0, 0, 0, 0)
+    scanline.ZIndex = 9
+    scanline.Parent = frame
+
+    spawn(function()
+        while scanline and scanline.Parent do
+            CreateTween(scanline, {Position = UDim2.new(0, 0, 1, 0)}, 1.5, Enum.EasingStyle.Linear):Play()
+            wait(1.5)
+            scanline.Position = UDim2.new(0, 0, 0, 0)
+            wait(0.3)
+        end
+    end)
+
     task.delay(duration, function()
         if frame and frame.Parent then
             DismissNotification(frame)
@@ -281,7 +364,6 @@ function Library:Notify(options)
     return frame
 end
 
--- 2. Decision Notification (Left/Right buttons)
 function Library:Decision(options)
     local text = options.Text or "Make a choice"
     local leftText = options.LeftButton or "Cancel"
@@ -290,149 +372,289 @@ function Library:Decision(options)
     local rightCallback = options.RightCallback or function() end
     local color = options.Color or Config.SecondaryColor
 
-    local frame = CreateNotificationFrame(120)
+    local frame = CreateNotificationFrame(140)
 
-    AddGradient(frame, color, Config.AccentColor, 90)
-    AddStroke(frame, color, 2)
+    local bgGrad = AddGradient(frame, color, Config.AccentColor, 90)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
+
+    local stroke = AddStroke(frame, color, 3)
     AddGlow(frame, color)
 
-    -- Text
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, -20, 0, 50)
-    TextLabel.Position = UDim2.new(0, 10, 0, 10)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = text
-    TextLabel.TextColor3 = Config.TextColor
-    TextLabel.TextSize = 15
-    TextLabel.TextWrapped = true
-    TextLabel.Parent = frame
+    local glowPulse = Instance.new("ImageLabel")
+    glowPulse.BackgroundTransparency = 1
+    glowPulse.Image = "rbxasset://textures/ui/Glow.png"
+    glowPulse.ImageColor3 = color
+    glowPulse.ImageTransparency = 0.7
+    glowPulse.Size = UDim2.new(1, 60, 1, 60)
+    glowPulse.Position = UDim2.new(0, -30, 0, -30)
+    glowPulse.ZIndex = 0
+    glowPulse.Parent = frame
 
-    -- Left Button
-    local LeftButton = Instance.new("TextButton")
-    LeftButton.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
-    LeftButton.BorderSizePixel = 0
-    LeftButton.Size = UDim2.new(0.48, 0, 0, 40)
-    LeftButton.Position = UDim2.new(0.02, 0, 1, -50)
-    LeftButton.Font = Enum.Font.GothamBold
-    LeftButton.Text = leftText
-    LeftButton.TextColor3 = Config.TextColor
-    LeftButton.TextSize = 14
-    LeftButton.Parent = frame
+    spawn(function()
+        while glowPulse and glowPulse.Parent do
+            CreateTween(glowPulse, {ImageTransparency = 0.3, Size = UDim2.new(1, 80, 1, 80)}, 1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+            wait(1)
+            CreateTween(glowPulse, {ImageTransparency = 0.7, Size = UDim2.new(1, 60, 1, 60)}, 1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+            wait(1)
+        end
+    end)
 
-    AddCorner(LeftButton, UDim.new(0, 8))
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -20, 0, 60)
+    textLabel.Position = UDim2.new(0, 10, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
 
-    LeftButton.MouseButton1Click:Connect(function()
+    local leftButton = Instance.new("TextButton")
+    leftButton.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
+    leftButton.BorderSizePixel = 0
+    leftButton.Size = UDim2.new(0.48, 0, 0, 45)
+    leftButton.Position = UDim2.new(0.02, 0, 1, -55)
+    leftButton.Font = Enum.Font.GothamBold
+    leftButton.Text = leftText
+    leftButton.TextColor3 = Config.TextColor
+    leftButton.TextSize = 15
+    leftButton.ZIndex = 3
+    leftButton.Parent = frame
+
+    AddCorner(leftButton, UDim.new(0, 10))
+    AddGradient(leftButton, Color3.fromRGB(255, 69, 0), Color3.fromRGB(200, 40, 0), 135)
+    AddStroke(leftButton, Color3.fromRGB(255, 100, 50), 2)
+
+    local leftGlow = AddGlow(leftButton, Color3.fromRGB(255, 69, 0))
+    leftGlow.ImageTransparency = 0.8
+
+    local leftShine = Instance.new("Frame")
+    leftShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    leftShine.BackgroundTransparency = 0.7
+    leftShine.BorderSizePixel = 0
+    leftShine.Size = UDim2.new(0, 25, 1.5, 0)
+    leftShine.Position = UDim2.new(-0.15, 0, -0.25, 0)
+    leftShine.Rotation = 25
+    leftShine.ZIndex = 4
+    leftShine.Parent = leftButton
+
+    leftButton.MouseButton1Click:Connect(function()
         leftCallback()
         DismissNotification(frame, 0.2)
     end)
 
-    LeftButton.MouseEnter:Connect(function()
-        CreateTween(LeftButton, {Size = UDim2.new(0.48, 0, 0, 43)}, 0.1):Play()
+    leftButton.MouseEnter:Connect(function()
+        CreateTween(leftButton, {Size = UDim2.new(0.48, 0, 0, 48)}, 0.15):Play()
+        CreateTween(leftGlow, {ImageTransparency = 0.4}, 0.2):Play()
+        CreateTween(leftShine, {Position = UDim2.new(1.15, 0, -0.25, 0)}, 0.4):Play()
     end)
 
-    LeftButton.MouseLeave:Connect(function()
-        CreateTween(LeftButton, {Size = UDim2.new(0.48, 0, 0, 40)}, 0.1):Play()
+    leftButton.MouseLeave:Connect(function()
+        CreateTween(leftButton, {Size = UDim2.new(0.48, 0, 0, 45)}, 0.15):Play()
+        CreateTween(leftGlow, {ImageTransparency = 0.8}, 0.2):Play()
+        leftShine.Position = UDim2.new(-0.15, 0, -0.25, 0)
     end)
 
-    -- Right Button
-    local RightButton = Instance.new("TextButton")
-    RightButton.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
-    RightButton.BorderSizePixel = 0
-    RightButton.Size = UDim2.new(0.48, 0, 0, 40)
-    RightButton.Position = UDim2.new(0.5, 0, 1, -50)
-    RightButton.Font = Enum.Font.GothamBold
-    RightButton.Text = rightText
-    RightButton.TextColor3 = Config.BackgroundColor
-    RightButton.TextSize = 14
-    RightButton.Parent = frame
+    local rightButton = Instance.new("TextButton")
+    rightButton.BackgroundColor3 = Color3.fromRGB(0, 255, 127)
+    rightButton.BorderSizePixel = 0
+    rightButton.Size = UDim2.new(0.48, 0, 0, 45)
+    rightButton.Position = UDim2.new(0.5, 0, 1, -55)
+    rightButton.Font = Enum.Font.GothamBold
+    rightButton.Text = rightText
+    rightButton.TextColor3 = Config.BackgroundColor
+    rightButton.TextSize = 15
+    rightButton.ZIndex = 3
+    rightButton.Parent = frame
 
-    AddCorner(RightButton, UDim.new(0, 8))
+    AddCorner(rightButton, UDim.new(0, 10))
+    AddGradient(rightButton, Color3.fromRGB(0, 255, 127), Color3.fromRGB(0, 200, 100), 135)
+    AddStroke(rightButton, Color3.fromRGB(50, 255, 150), 2)
 
-    RightButton.MouseButton1Click:Connect(function()
+    local rightGlow = AddGlow(rightButton, Color3.fromRGB(0, 255, 127))
+    rightGlow.ImageTransparency = 0.8
+
+    local rightShine = Instance.new("Frame")
+    rightShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    rightShine.BackgroundTransparency = 0.7
+    rightShine.BorderSizePixel = 0
+    rightShine.Size = UDim2.new(0, 25, 1.5, 0)
+    rightShine.Position = UDim2.new(-0.15, 0, -0.25, 0)
+    rightShine.Rotation = 25
+    rightShine.ZIndex = 4
+    rightShine.Parent = rightButton
+
+    rightButton.MouseButton1Click:Connect(function()
         rightCallback()
         DismissNotification(frame, 0.2)
     end)
 
-    RightButton.MouseEnter:Connect(function()
-        CreateTween(RightButton, {Size = UDim2.new(0.48, 0, 0, 43)}, 0.1):Play()
+    rightButton.MouseEnter:Connect(function()
+        CreateTween(rightButton, {Size = UDim2.new(0.48, 0, 0, 48)}, 0.15):Play()
+        CreateTween(rightGlow, {ImageTransparency = 0.4}, 0.2):Play()
+        CreateTween(rightShine, {Position = UDim2.new(1.15, 0, -0.25, 0)}, 0.4):Play()
     end)
 
-    RightButton.MouseLeave:Connect(function()
-        CreateTween(RightButton, {Size = UDim2.new(0.48, 0, 0, 40)}, 0.1):Play()
+    rightButton.MouseLeave:Connect(function()
+        CreateTween(rightButton, {Size = UDim2.new(0.48, 0, 0, 45)}, 0.15):Play()
+        CreateTween(rightGlow, {ImageTransparency = 0.8}, 0.2):Play()
+        rightShine.Position = UDim2.new(-0.15, 0, -0.25, 0)
     end)
 
     return frame
 end
 
--- 3. Progress Bar Notification
 function Library:Progress(options)
     local text = options.Text or "Loading..."
     local duration = options.Duration or 5
     local color = options.Color or Config.AccentColor
     local callback = options.Callback or function() end
 
-    local frame = CreateNotificationFrame(100)
+    local frame = CreateNotificationFrame(120)
 
-    AddGradient(frame, color, Config.PrimaryColor, 135)
-    AddStroke(frame, color, 2)
-    AddGlow(frame, color)
+    local bgGrad = AddGradient(frame, color, Config.PrimaryColor, 135)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 4 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.05)
+            end
+        end
+    end)
 
-    -- Text
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, -20, 0, 30)
-    TextLabel.Position = UDim2.new(0, 10, 0, 10)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = text
-    TextLabel.TextColor3 = Config.TextColor
-    TextLabel.TextSize = 15
-    TextLabel.TextWrapped = true
-    TextLabel.Parent = frame
+    AddStroke(frame, color, 3)
 
-    -- Percentage
-    local PercentLabel = Instance.new("TextLabel")
-    PercentLabel.BackgroundTransparency = 1
-    PercentLabel.Size = UDim2.new(0, 60, 0, 30)
-    PercentLabel.Position = UDim2.new(1, -70, 0, 10)
-    PercentLabel.Font = Enum.Font.GothamBold
-    PercentLabel.Text = "0%"
-    PercentLabel.TextColor3 = Config.SuccessColor
-    PercentLabel.TextSize = 16
-    PercentLabel.Parent = frame
+    local mainGlow = AddGlow(frame, color)
+    spawn(function()
+        while mainGlow and mainGlow.Parent do
+            CreateTween(mainGlow, {ImageTransparency = 0.3}, 0.8, Enum.EasingStyle.Sine):Play()
+            wait(0.8)
+            CreateTween(mainGlow, {ImageTransparency = 0.6}, 0.8, Enum.EasingStyle.Sine):Play()
+            wait(0.8)
+        end
+    end)
 
-    -- Progress Bar Background
-    local ProgressBack = Instance.new("Frame")
-    ProgressBack.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    ProgressBack.BorderSizePixel = 0
-    ProgressBack.Size = UDim2.new(1, -20, 0, 20)
-    ProgressBack.Position = UDim2.new(0, 10, 1, -35)
-    ProgressBack.Parent = frame
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -80, 0, 35)
+    textLabel.Position = UDim2.new(0, 10, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
 
-    AddCorner(ProgressBack, UDim.new(1, 0))
+    local percentLabel = Instance.new("TextLabel")
+    percentLabel.BackgroundTransparency = 1
+    percentLabel.Size = UDim2.new(0, 70, 0, 35)
+    percentLabel.Position = UDim2.new(1, -75, 0, 10)
+    percentLabel.Font = Enum.Font.GothamBold
+    percentLabel.Text = "0%"
+    percentLabel.TextColor3 = Config.SuccessColor
+    percentLabel.TextSize = 18
+    percentLabel.ZIndex = 3
+    percentLabel.Parent = frame
 
-    -- Progress Bar Fill
-    local ProgressFill = Instance.new("Frame")
-    ProgressFill.BackgroundColor3 = Config.SuccessColor
-    ProgressFill.BorderSizePixel = 0
-    ProgressFill.Size = UDim2.new(0, 0, 1, 0)
-    ProgressFill.Parent = ProgressBack
+    spawn(function()
+        while percentLabel and percentLabel.Parent and percentLabel.Text ~= "100%" do
+            CreateTween(percentLabel, {TextSize = 20}, 0.3):Play()
+            wait(0.3)
+            CreateTween(percentLabel, {TextSize = 18}, 0.3):Play()
+            wait(0.3)
+        end
+    end)
 
-    AddCorner(ProgressFill, UDim.new(1, 0))
-    AddGradient(ProgressFill, Config.SuccessColor, Config.PrimaryColor, 0)
+    local progressBack = Instance.new("Frame")
+    progressBack.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    progressBack.BorderSizePixel = 0
+    progressBack.Size = UDim2.new(1, -20, 0, 28)
+    progressBack.Position = UDim2.new(0, 10, 1, -40)
+    progressBack.ZIndex = 2
+    progressBack.Parent = frame
 
-    -- Animate progress
+    AddCorner(progressBack, UDim.new(1, 0))
+    AddStroke(progressBack, color, 2)
+
+    local progressFill = Instance.new("Frame")
+    progressFill.BackgroundColor3 = Config.SuccessColor
+    progressFill.BorderSizePixel = 0
+    progressFill.Size = UDim2.new(0, 0, 1, 0)
+    progressFill.ZIndex = 3
+    progressFill.Parent = progressBack
+
+    AddCorner(progressFill, UDim.new(1, 0))
+    local fillGrad = AddGradient(progressFill, Config.SuccessColor, Config.PrimaryColor, 0)
+
+    spawn(function()
+        while progressFill and progressFill.Parent do
+            for i = 0, 360, 5 do
+                if not progressFill or not progressFill.Parent then break end
+                fillGrad.Rotation = i
+                wait(0.05)
+            end
+        end
+    end)
+
+    local fillGlow = Instance.new("ImageLabel")
+    fillGlow.BackgroundTransparency = 1
+    fillGlow.Image = "rbxasset://textures/ui/Glow.png"
+    fillGlow.ImageColor3 = Config.SuccessColor
+    fillGlow.ImageTransparency = 0.4
+    fillGlow.Size = UDim2.new(1, 30, 1, 30)
+    fillGlow.Position = UDim2.new(0, -15, 0, -15)
+    fillGlow.ZIndex = 2
+    fillGlow.Parent = progressFill
+
+    for i = 1, 5 do
+        local spark = Instance.new("Frame")
+        spark.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        spark.BorderSizePixel = 0
+        spark.Size = UDim2.new(0, 3, 0, 3)
+        spark.Position = UDim2.new(0, 0, 0.5, 0)
+        spark.BackgroundTransparency = 0.3
+        spark.ZIndex = 5
+        spark.Parent = progressFill
+        AddCorner(spark, UDim.new(1, 0))
+
+        spawn(function()
+            while spark and spark.Parent do
+                local randY = math.random(-10, 10) / 10
+                CreateTween(spark, {
+                    Position = UDim2.new(1, 0, 0.5, randY),
+                    BackgroundTransparency = 1
+                }, 0.6, Enum.EasingStyle.Linear):Play()
+                wait(0.6)
+                spark.Position = UDim2.new(0, 0, 0.5, 0)
+                spark.BackgroundTransparency = 0.3
+                wait(0.1)
+            end
+        end)
+    end
+
     spawn(function()
         local startTime = tick()
         while tick() - startTime < duration do
             local progress = (tick() - startTime) / duration
-            ProgressFill.Size = UDim2.new(progress, 0, 1, 0)
-            PercentLabel.Text = math.floor(progress * 100) .. "%"
+            progressFill.Size = UDim2.new(progress, 0, 1, 0)
+            percentLabel.Text = math.floor(progress * 100) .. "%"
             wait(0.05)
         end
 
-        ProgressFill.Size = UDim2.new(1, 0, 1, 0)
-        PercentLabel.Text = "100%"
+        progressFill.Size = UDim2.new(1, 0, 1, 0)
+        percentLabel.Text = "100%"
 
         wait(0.5)
         callback()
@@ -442,167 +664,207 @@ function Library:Progress(options)
     return frame
 end
 
--- 4. Input Notification (Text input)
 function Library:Input(options)
     local text = options.Text or "Enter text:"
     local placeholder = options.Placeholder or "Type here..."
     local callback = options.Callback or function() end
     local color = options.Color or Config.PrimaryColor
 
-    local frame = CreateNotificationFrame(150)
+    local frame = CreateNotificationFrame(170)
 
-    AddGradient(frame, color, Config.SecondaryColor, 60)
+    local bgGrad = AddGradient(frame, color, Config.SecondaryColor, 60)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
+
     AddStroke(frame, color, 3)
-    AddGlow(frame, color)
 
-    -- Animated border particles
-    local particleContainer = Instance.new("Frame")
-    particleContainer.BackgroundTransparency = 1
-    particleContainer.Size = UDim2.new(1, 0, 1, 0)
-    particleContainer.ZIndex = 5
-    particleContainer.Parent = frame
+    local mainGlow = AddGlow(frame, color)
+    spawn(function()
+        while mainGlow and mainGlow.Parent do
+            CreateTween(mainGlow, {ImageTransparency = 0.4}, 1, Enum.EasingStyle.Sine):Play()
+            wait(1)
+            CreateTween(mainGlow, {ImageTransparency = 0.7}, 1, Enum.EasingStyle.Sine):Play()
+            wait(1)
+        end
+    end)
 
-    for i = 1, 8 do
-        local particle = Instance.new("Frame")
-        particle.BackgroundColor3 = color
-        particle.BorderSizePixel = 0
-        particle.Size = UDim2.new(0, 4, 0, 4)
-        particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
-        particle.Parent = particleContainer
-        AddCorner(particle, UDim.new(1, 0))
+    local particles = Instance.new("Frame")
+    particles.BackgroundTransparency = 1
+    particles.Size = UDim2.new(1, 0, 1, 0)
+    particles.ZIndex = 8
+    particles.Parent = frame
+
+    for i = 1, 15 do
+        local dot = Instance.new("Frame")
+        dot.BackgroundColor3 = color
+        dot.BorderSizePixel = 0
+        dot.Size = UDim2.new(0, math.random(2, 4), 0, math.random(2, 4))
+        dot.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        dot.BackgroundTransparency = math.random(50, 85) / 100
+        dot.Parent = particles
+        AddCorner(dot, UDim.new(1, 0))
 
         spawn(function()
-            while particle and particle.Parent do
-                CreateTween(particle, {
+            while dot and dot.Parent do
+                CreateTween(dot, {
                     Position = UDim2.new(math.random(), 0, math.random(), 0),
-                    BackgroundTransparency = math.random(30, 70) / 100
-                }, 2 + math.random(), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut):Play()
+                    BackgroundTransparency = math.random(40, 90) / 100
+                }, 2 + math.random(), Enum.EasingStyle.Sine):Play()
                 wait(2 + math.random())
             end
         end)
     end
 
-    -- Text with icon
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, -50, 0, 30)
-    TextLabel.Position = UDim2.new(0, 10, 0, 10)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = "✏️ " .. text
-    TextLabel.TextColor3 = Config.TextColor
-    TextLabel.TextSize = 15
-    TextLabel.TextWrapped = true
-    TextLabel.Parent = frame
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -20, 0, 30)
+    textLabel.Position = UDim2.new(0, 10, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
 
-    -- Input Box Container with shadow
-    local InputShadow = Instance.new("Frame")
-    InputShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    InputShadow.BackgroundTransparency = 0.7
-    InputShadow.BorderSizePixel = 0
-    InputShadow.Size = UDim2.new(1, -16, 0, 40)
-    InputShadow.Position = UDim2.new(0, 12, 0, 49)
-    InputShadow.ZIndex = 1
-    InputShadow.Parent = frame
-    AddCorner(InputShadow, UDim.new(0, 10))
+    local inputShadow = Instance.new("Frame")
+    inputShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    inputShadow.BackgroundTransparency = 0.6
+    inputShadow.BorderSizePixel = 0
+    inputShadow.Size = UDim2.new(1, -16, 0, 45)
+    inputShadow.Position = UDim2.new(0, 12, 0, 49)
+    inputShadow.ZIndex = 1
+    inputShadow.Parent = frame
+    AddCorner(inputShadow, UDim.new(0, 12))
 
-    -- Input Box
-    local InputBox = Instance.new("TextBox")
-    InputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    InputBox.BorderSizePixel = 0
-    InputBox.Size = UDim2.new(1, -20, 0, 40)
-    InputBox.Position = UDim2.new(0, 10, 0, 45)
-    InputBox.Font = Enum.Font.GothamBold
-    InputBox.PlaceholderText = placeholder
-    InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
-    InputBox.Text = ""
-    InputBox.TextColor3 = Config.TextColor
-    InputBox.TextSize = 15
-    InputBox.ClearTextOnFocus = false
-    InputBox.ZIndex = 2
-    InputBox.Parent = frame
+    local inputBox = Instance.new("TextBox")
+    inputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    inputBox.BorderSizePixel = 0
+    inputBox.Size = UDim2.new(1, -20, 0, 45)
+    inputBox.Position = UDim2.new(0, 10, 0, 45)
+    inputBox.Font = Enum.Font.GothamBold
+    inputBox.PlaceholderText = placeholder
+    inputBox.PlaceholderColor3 = Color3.fromRGB(140, 140, 150)
+    inputBox.Text = ""
+    inputBox.TextColor3 = Config.TextColor
+    inputBox.TextSize = 16
+    inputBox.ClearTextOnFocus = false
+    inputBox.ZIndex = 2
+    inputBox.Parent = frame
 
-    AddCorner(InputBox, UDim.new(0, 10))
-    AddStroke(InputBox, color, 2)
-    AddGradient(InputBox, Color3.fromRGB(30, 30, 40), Color3.fromRGB(50, 50, 60), 90)
+    AddCorner(inputBox, UDim.new(0, 12))
+    local inputStroke = AddStroke(inputBox, color, 2)
+    local inputGrad = AddGradient(inputBox, Color3.fromRGB(25, 25, 35), Color3.fromRGB(45, 45, 55), 90)
 
-    local InputPadding = Instance.new("UIPadding")
-    InputPadding.PaddingLeft = UDim.new(0, 12)
-    InputPadding.PaddingRight = UDim.new(0, 12)
-    InputPadding.Parent = InputBox
+    local inputPadding = Instance.new("UIPadding")
+    inputPadding.PaddingLeft = UDim.new(0, 15)
+    inputPadding.PaddingRight = UDim.new(0, 15)
+    inputPadding.Parent = inputBox
 
-    -- Input glow effect on focus
-    local inputGlow = AddGlow(InputBox, color)
+    local inputGlow = AddGlow(inputBox, color)
     inputGlow.ImageTransparency = 1
 
-    InputBox.Focused:Connect(function()
-        CreateTween(inputGlow, {ImageTransparency = 0.3}, 0.3):Play()
-        CreateTween(InputBox:FindFirstChildOfClass("UIStroke"), {Thickness = 3}, 0.2):Play()
+    spawn(function()
+        while inputGrad and inputGrad.Parent do
+            for i = 0, 360, 4 do
+                if not inputGrad or not inputGrad.Parent then break end
+                inputGrad.Rotation = i
+                wait(0.06)
+            end
+        end
     end)
 
-    InputBox.FocusLost:Connect(function(enterPressed)
+    inputBox.Focused:Connect(function()
+        CreateTween(inputGlow, {ImageTransparency = 0.3}, 0.3):Play()
+        CreateTween(inputStroke, {Thickness = 4}, 0.2):Play()
+        CreateTween(inputBox, {Size = UDim2.new(1, -20, 0, 48)}, 0.2):Play()
+    end)
+
+    inputBox.FocusLost:Connect(function(enterPressed)
         CreateTween(inputGlow, {ImageTransparency = 1}, 0.3):Play()
-        CreateTween(InputBox:FindFirstChildOfClass("UIStroke"), {Thickness = 2}, 0.2):Play()
+        CreateTween(inputStroke, {Thickness = 2}, 0.2):Play()
+        CreateTween(inputBox, {Size = UDim2.new(1, -20, 0, 45)}, 0.2):Play()
         if enterPressed then
             submit()
         end
     end)
 
-    -- Submit Button with gradient and effects
-    local SubmitButton = Instance.new("TextButton")
-    SubmitButton.BackgroundColor3 = color
-    SubmitButton.BorderSizePixel = 0
-    SubmitButton.Size = UDim2.new(1, -20, 0, 40)
-    SubmitButton.Position = UDim2.new(0, 10, 1, -50)
-    SubmitButton.Font = Enum.Font.GothamBold
-    SubmitButton.Text = "✓ Submit"
-    SubmitButton.TextColor3 = Config.TextColor
-    SubmitButton.TextSize = 16
-    SubmitButton.ZIndex = 2
-    SubmitButton.Parent = frame
+    local submitButton = Instance.new("TextButton")
+    submitButton.BackgroundColor3 = color
+    submitButton.BorderSizePixel = 0
+    submitButton.Size = UDim2.new(1, -20, 0, 45)
+    submitButton.Position = UDim2.new(0, 10, 1, -55)
+    submitButton.Font = Enum.Font.GothamBold
+    submitButton.Text = "Submit"
+    submitButton.TextColor3 = Config.TextColor
+    submitButton.TextSize = 17
+    submitButton.ZIndex = 2
+    submitButton.Parent = frame
 
-    AddCorner(SubmitButton, UDim.new(0, 10))
-    AddGradient(SubmitButton, color, Config.AccentColor, 45)
-    AddStroke(SubmitButton, Config.TextColor, 2)
+    AddCorner(submitButton, UDim.new(0, 12))
+    local btnGrad = AddGradient(submitButton, color, Config.AccentColor, 45)
+    AddStroke(submitButton, Config.TextColor, 2)
 
-    -- Button glow
-    local buttonGlow = AddGlow(SubmitButton, color)
+    spawn(function()
+        while btnGrad and btnGrad.Parent do
+            for i = 0, 360, 5 do
+                if not btnGrad or not btnGrad.Parent then break end
+                btnGrad.Rotation = i
+                wait(0.05)
+            end
+        end
+    end)
+
+    local buttonGlow = AddGlow(submitButton, color)
     buttonGlow.ImageTransparency = 0.6
 
-    -- Button shine effect
     local buttonShine = Instance.new("Frame")
     buttonShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    buttonShine.BackgroundTransparency = 0.8
+    buttonShine.BackgroundTransparency = 0.75
     buttonShine.BorderSizePixel = 0
-    buttonShine.Size = UDim2.new(0, 30, 1.5, 0)
-    buttonShine.Position = UDim2.new(-0.1, 0, -0.25, 0)
-    buttonShine.Rotation = 20
+    buttonShine.Size = UDim2.new(0, 35, 1.6, 0)
+    buttonShine.Position = UDim2.new(-0.12, 0, -0.3, 0)
+    buttonShine.Rotation = 25
     buttonShine.ZIndex = 3
-    buttonShine.Parent = SubmitButton
+    buttonShine.Parent = submitButton
+
+    spawn(function()
+        while buttonShine and buttonShine.Parent do
+            wait(1.5)
+            CreateTween(buttonShine, {Position = UDim2.new(1.12, 0, -0.3, 0)}, 0.8, Enum.EasingStyle.Quad):Play()
+            wait(0.8)
+            buttonShine.Position = UDim2.new(-0.12, 0, -0.3, 0)
+        end
+    end)
 
     local function submit()
-        local inputText = InputBox.Text
+        local inputText = inputBox.Text
         callback(inputText)
         DismissNotification(frame, 0.2)
     end
 
-    SubmitButton.MouseButton1Click:Connect(submit)
+    submitButton.MouseButton1Click:Connect(submit)
 
-    SubmitButton.MouseEnter:Connect(function()
-        CreateTween(SubmitButton, {Size = UDim2.new(1, -20, 0, 43)}, 0.15):Play()
+    submitButton.MouseEnter:Connect(function()
+        CreateTween(submitButton, {Size = UDim2.new(1, -20, 0, 48)}, 0.15):Play()
         CreateTween(buttonGlow, {ImageTransparency = 0.3}, 0.2):Play()
-        CreateTween(buttonShine, {Position = UDim2.new(1.1, 0, -0.25, 0)}, 0.5, Enum.EasingStyle.Quad):Play()
     end)
 
-    SubmitButton.MouseLeave:Connect(function()
-        CreateTween(SubmitButton, {Size = UDim2.new(1, -20, 0, 40)}, 0.15):Play()
+    submitButton.MouseLeave:Connect(function()
+        CreateTween(submitButton, {Size = UDim2.new(1, -20, 0, 45)}, 0.15):Play()
         CreateTween(buttonGlow, {ImageTransparency = 0.6}, 0.2):Play()
-        buttonShine.Position = UDim2.new(-0.1, 0, -0.25, 0)
     end)
 
     return frame
 end
 
--- 5. Image Notification (with icon/image)
 function Library:Image(options)
     if type(options) ~= "table" then
         options = {Text = tostring(options)}
@@ -613,37 +875,102 @@ function Library:Image(options)
     local duration = options.Duration or Config.DefaultDuration
     local color = options.Color or Config.SecondaryColor
 
-    local frame = CreateNotificationFrame(100)
+    local frame = CreateNotificationFrame(110)
 
-    AddGradient(frame, color, Config.AccentColor, 120)
-    AddStroke(frame, color, 2)
-    AddGlow(frame, color)
+    local bgGrad = AddGradient(frame, color, Config.AccentColor, 120)
+    spawn(function()
+        while frame and frame.Parent do
+            for i = 0, 360, 3 do
+                if not frame or not frame.Parent then break end
+                bgGrad.Rotation = i
+                wait(0.04)
+            end
+        end
+    end)
 
-    -- Image
-    local Image = Instance.new("ImageLabel")
-    Image.BackgroundTransparency = 1
-    Image.Size = UDim2.new(0, 70, 0, 70)
-    Image.Position = UDim2.new(0, 10, 0.5, -35)
-    Image.Image = imageId
-    Image.Parent = frame
+    AddStroke(frame, color, 3)
 
-    AddCorner(Image, UDim.new(0, 10))
+    local mainGlow = AddGlow(frame, color)
+    spawn(function()
+        while mainGlow and mainGlow.Parent do
+            CreateTween(mainGlow, {ImageTransparency = 0.3}, 0.9, Enum.EasingStyle.Sine):Play()
+            wait(0.9)
+            CreateTween(mainGlow, {ImageTransparency = 0.6}, 0.9, Enum.EasingStyle.Sine):Play()
+            wait(0.9)
+        end
+    end)
 
-    -- Text
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.Size = UDim2.new(1, -100, 1, -20)
-    TextLabel.Position = UDim2.new(0, 90, 0, 10)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.Text = text
-    TextLabel.TextColor3 = Config.TextColor
-    TextLabel.TextSize = 15
-    TextLabel.TextWrapped = true
-    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TextLabel.TextYAlignment = Enum.TextYAlignment.Top
-    TextLabel.Parent = frame
+    local imageShadow = Instance.new("Frame")
+    imageShadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    imageShadow.BackgroundTransparency = 0.5
+    imageShadow.BorderSizePixel = 0
+    imageShadow.Size = UDim2.new(0, 75, 0, 75)
+    imageShadow.Position = UDim2.new(0, 13, 0.5, -35)
+    imageShadow.ZIndex = 1
+    imageShadow.Parent = frame
+    AddCorner(imageShadow, UDim.new(0, 12))
 
-    -- Auto dismiss
+    local image = Instance.new("ImageLabel")
+    image.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    image.BackgroundTransparency = 0
+    image.BorderSizePixel = 0
+    image.Size = UDim2.new(0, 75, 0, 75)
+    image.Position = UDim2.new(0, 10, 0.5, -37.5)
+    image.Image = imageId
+    image.ZIndex = 2
+    image.Parent = frame
+
+    AddCorner(image, UDim.new(0, 12))
+    AddStroke(image, color, 2)
+
+    local imageGlow = AddGlow(image, color)
+    imageGlow.ImageTransparency = 0.5
+
+    spawn(function()
+        while image and image.Parent do
+            CreateTween(image, {Rotation = 5}, 0.5, Enum.EasingStyle.Sine):Play()
+            wait(0.5)
+            CreateTween(image, {Rotation = -5}, 0.5, Enum.EasingStyle.Sine):Play()
+            wait(0.5)
+        end
+    end)
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.BackgroundTransparency = 1
+    textLabel.Size = UDim2.new(1, -105, 1, -20)
+    textLabel.Position = UDim2.new(0, 95, 0, 10)
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.Text = text
+    textLabel.TextColor3 = Config.TextColor
+    textLabel.TextSize = 16
+    textLabel.TextWrapped = true
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Top
+    textLabel.ZIndex = 3
+    textLabel.Parent = frame
+
+    for i = 1, 8 do
+        local particle = Instance.new("Frame")
+        particle.BackgroundColor3 = color
+        particle.BorderSizePixel = 0
+        particle.Size = UDim2.new(0, 3, 0, 3)
+        particle.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        particle.BackgroundTransparency = math.random(50, 80) / 100
+        particle.ZIndex = 7
+        particle.Parent = frame
+        AddCorner(particle, UDim.new(1, 0))
+
+        spawn(function()
+            while particle and particle.Parent do
+                CreateTween(particle, {
+                    Position = UDim2.new(math.random(), 0, math.random(), 0),
+                    BackgroundTransparency = math.random(40, 85) / 100
+                }, 1.8 + math.random(), Enum.EasingStyle.Sine):Play()
+                wait(1.8 + math.random())
+            end
+        end)
+    end
+
     task.delay(duration, function()
         if frame and frame.Parent then
             DismissNotification(frame)
@@ -653,7 +980,6 @@ function Library:Image(options)
     return frame
 end
 
--- 6. Success Notification
 function Library:Success(text, duration)
     return self:Notify({
         Text = text or "Success!",
@@ -663,7 +989,6 @@ function Library:Success(text, duration)
     })
 end
 
--- 7. Error Notification
 function Library:Error(text, duration)
     return self:Notify({
         Text = text or "Error!",
@@ -673,7 +998,6 @@ function Library:Error(text, duration)
     })
 end
 
--- 8. Warning Notification
 function Library:Warning(text, duration)
     return self:Notify({
         Text = text or "Warning!",
@@ -683,7 +1007,6 @@ function Library:Warning(text, duration)
     })
 end
 
--- Clear all notifications
 function Library:ClearAll()
     for _, notif in ipairs(activeNotifications) do
         if notif and notif.Parent then
