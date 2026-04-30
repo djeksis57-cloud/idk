@@ -223,7 +223,7 @@ function Library:Notify(options)
         math.clamp(color.R * 255 + 30, 0, 255),
         math.clamp(color.G * 255 + 30, 0, 255),
         math.clamp(color.B * 255 + 30, 0, 255)
-    ):ToColor3(), 45)
+    ), 45)
 
     AddStroke(frame, color, 2)
     AddGlow(frame, color)
